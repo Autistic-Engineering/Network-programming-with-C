@@ -1,11 +1,5 @@
-#define _GNU_SOURCE
+#include "CommonHeader.h"
 #include "UdpToUpperServerClient.h"
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <stdlib.h>
-#include <unistd.h>
 
 void UdpToUpperServer(){
     printf("Enter a port to bind to:\n");
