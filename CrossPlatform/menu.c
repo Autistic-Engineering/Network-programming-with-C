@@ -11,9 +11,10 @@ int PrintMenu(){
         printf("3 - Dummy tcp server\n");
         printf("4 - Udp toUpper server\n");
         printf("5 - Udp client\n");
+        printf("6 - DNS client\n");
 
         scanf("%d", &num);
-        if(num>5 || num <1)
+        if(num>6 || num <1)
             continue;
         break;
     }

@@ -4,6 +4,7 @@
 #include "TcpServerClient.h"
 #include "menu.h"
 #include "UdpToUpperServerClient.h"
+#include "DnsRequester.h"
 
 int main(int argc, char** args)
 {
@@ -22,6 +23,8 @@ int main(int argc, char** args)
 	case 5:
 		UdpClient();
 		break;
+	case 6:
+		StartDnsRequestHandler();
 	default:
 		break;
 	}

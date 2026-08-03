@@ -6,6 +6,7 @@
 	#include <WinSock2.h>
 	#include <WS2tcpip.h>
 	#include <conio.h>  //_kbhit
+	#include <winsock2.h>
 
 	#define ISVALIDSOCKET(x) ((x) != INVALID_SOCKET)
 	#define CLOSESOCKET(x) (closesocket(x))
@@ -26,3 +27,7 @@
 	#define GETERRORCODE (errno)
 	#define SOCKET int
 #endif
+
+void Init();
+
+void Destroy();
