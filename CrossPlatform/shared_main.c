@@ -5,6 +5,7 @@
 #include "menu.h"
 #include "UdpToUpperServerClient.h"
 #include "DnsRequester.h"
+#include "WebRequester.h"
 
 int main(int argc, char** args)
 {
@@ -25,6 +26,10 @@ int main(int argc, char** args)
 		break;
 	case 6:
 		StartDnsRequestHandler();
+		break;
+	case 7:
+		MakeWebRequest();
+		break;
 	default:
 		break;
 	}
