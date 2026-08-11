@@ -13,9 +13,10 @@ int PrintMenu(){
         printf("5 - Udp client\n");
         printf("6 - DNS client\n");
         printf("7 - Web requester\n");
+        printf("8 - Web file sender\n");
 
         scanf("%d", &num);
-        if(num>7 || num <1)
+        if(num>8 || num <1)
             continue;
         break;
     }

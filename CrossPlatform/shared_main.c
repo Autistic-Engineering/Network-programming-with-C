@@ -6,6 +6,7 @@
 #include "UdpToUpperServerClient.h"
 #include "DnsRequester.h"
 #include "WebRequester.h"
+#include "FileServer.h"
 
 int main(int argc, char** args)
 {
@@ -29,6 +30,9 @@ int main(int argc, char** args)
 		break;
 	case 7:
 		MakeWebRequest();
+		break;
+	case 8:
+		CreateWebFileServer();
 		break;
 	default:
 		break;
