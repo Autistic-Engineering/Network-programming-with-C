@@ -17,9 +17,9 @@ struct client
 	struct client* next;
 };
 
-struct client* client_list;
+static struct client* client_list;
 
-SOCKET server;
+static SOCKET server;
 
 static const char err400[] = "HTTP/1.1 400 Bad Request\r\n"
 "Connection: close\r\n"
@@ -38,4 +38,4 @@ void SendWholeMessage(SOCKET target, const char* message);
 const char* get_content_type(const char* path);
 void SendFile(SOCKET client, char* path);
 void CreateWebFileServer();
-struct fd_set RunSelect();
+fd_set RunSelect();

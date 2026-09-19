@@ -53,7 +53,7 @@ void StartDnsRequestHandler()
     if (rec < 12)
         goto cleanStuff;
     int curr = 0;
-    printf("ID:%x\n",*(UINT16*) & resp[curr]);
+    printf("ID:%x\n",*(u_int16_t*) & resp[curr]);
     curr += 2;
     printf("QR bit (0 - query): %d\n", resp[curr] >> 7);
     int opcode = (resp[curr] >> 3)&0x7;

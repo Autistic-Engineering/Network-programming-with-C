@@ -1,4 +1,5 @@
 #include "FileServer.h"
+
 //http://127.0.0.1:8080/
 void CreateWebFileServer()
 {
@@ -24,7 +25,7 @@ void CreateWebFileServer()
 
 	while (1)
 	{
-		struct fd_set set = RunSelect();
+		fd_set set = RunSelect();
 		if (FD_ISSET(server, &set))
 		{
 			//new client
@@ -175,10 +176,10 @@ void SendFile(SOCKET client, char* path)
 	
 }
 
-struct fd_set RunSelect()
+fd_set RunSelect()
 {
 	SOCKET max;
-	struct fd_set set;
+	fd_set set;
 	FD_ZERO(&set);
 	FD_SET(server, & set);
 	max = server;

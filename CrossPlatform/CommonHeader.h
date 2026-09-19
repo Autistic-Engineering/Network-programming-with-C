@@ -20,10 +20,13 @@
 	#include <netdb.h>
 	#include <unistd.h>
 	#include <errno.h>
+	#include <sys/select.h>
+	#include <sys/time.h>
 
 	#define ISVALIDSOCKET(x) ((x) > 0)
 	#define CLOSESOCKET(x) (close(x))
 	#define GETERRORCODE (errno)
+	#define GETLASTERROR GETERRORCODE
 	#define SOCKET int
 #endif
 
