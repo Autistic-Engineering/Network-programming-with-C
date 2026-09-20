@@ -7,6 +7,7 @@
 #include "DnsRequester.h"
 #include "WebRequester.h"
 #include "FileServer.h"
+#include "MailClient.h"
 
 int main(int argc, char** args)
 {
@@ -33,6 +34,9 @@ int main(int argc, char** args)
 		break;
 	case 8:
 		CreateWebFileServer();
+		break;
+	case 9:
+		RunMailClient();
 		break;
 	default:
 		break;
