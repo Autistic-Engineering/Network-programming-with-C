@@ -14,9 +14,10 @@ int PrintMenu(){
         printf("6 - DNS client\n");
         printf("7 - Web requester\n");
         printf("8 - Web file sender\n");
-        printf("9 - Mail client\n");    
+        printf("9 - Mail client\n");   
+        printf("10 - OpenSSL client\n");   
         scanf("%d", &num);
-        if(num>9 || num <1)
+        if(num>10 || num <1)
             continue;
         break;
     }

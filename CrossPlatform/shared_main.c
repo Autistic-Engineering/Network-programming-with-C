@@ -8,6 +8,7 @@
 #include "WebRequester.h"
 #include "FileServer.h"
 #include "MailClient.h"
+#include "OpenSslClient.h"
 
 int main(int argc, char** args)
 {
@@ -37,6 +38,9 @@ int main(int argc, char** args)
 		break;
 	case 9:
 		RunMailClient();
+		break;
+	case 10:
+		TestOpenSslPresent();
 		break;
 	default:
 		break;
