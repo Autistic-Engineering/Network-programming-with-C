@@ -30,6 +30,10 @@
 	#define SOCKET int
 #endif
 
+#include <stdio.h>
+
 void Init();
 
 void Destroy();
+
+void getInput(const char* parameterName, char* buffer);

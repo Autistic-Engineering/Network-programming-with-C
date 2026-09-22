@@ -1,6 +1,5 @@
 #include "MailClient.h"
 #include <stdarg.h>
-#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h> //isdigit
@@ -8,15 +7,6 @@
 
 #define MAX_INPUT 128
 #define SIZE 1024
-
-void getInput(const char* promt, char* buffer){
-    printf("%s", promt);
-    buffer[0] = 0;
-    fgets(buffer, MAX_INPUT, stdin);
-    const int read = strlen(buffer);
-    if(read>0)
-        buffer[read-1] = 0;
-}
 
 void sendFormatted(SOCKET socket, const char* text, ...){
     char buffer[SIZE];

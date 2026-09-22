@@ -40,7 +40,7 @@ int main(int argc, char** args)
 		RunMailClient();
 		break;
 	case 10:
-		TestOpenSslPresent();
+		RunOpenSslClient();
 		break;
 	default:
 		break;
