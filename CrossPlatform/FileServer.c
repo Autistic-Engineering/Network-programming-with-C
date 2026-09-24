@@ -1,16 +1,20 @@
 #include "FileServer.h"
-
+#include <string.h>
 //http://127.0.0.1:8080/
 void CreateWebFileServer()
 {
 	Init();
 	//start server
+	printf("Starting a listener!\n");
 	struct addrinfo hints, *resAddr;
 	memset(&hints, 0, sizeof(struct addrinfo));
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
-	getaddrinfo(0, "8080", &hints, &resAddr);
+	if(getaddrinfo(0, "8080", &hints, &resAddr)!=0){
+		printf("Failed to get the listening address info\n");
+		exit(1);
+	}
 	
 
 	server = socket(resAddr->ai_family, resAddr->ai_socktype, resAddr->ai_protocol);
@@ -21,8 +25,12 @@ void CreateWebFileServer()
 
 	freeaddrinfo(resAddr);
 
-	listen(server, 10);
-
+	if(listen(server, 10)!=0)
+	{
+		printf("Failed to initiate lising\n");
+		exit(1);
+	}
+	printf("Lesten cycle begins!\n");
 	while (1)
 	{
 		fd_set set = RunSelect();
@@ -43,6 +51,8 @@ void CreateWebFileServer()
 				newOne->next = client_list;
 
 				client_list = newOne;
+
+				printf("New client got connected!\n");
 			}
 			else
 				CLOSESOCKET(clientSocket);
@@ -63,8 +73,10 @@ void CreateWebFileServer()
 
 			if (cl->received > 0)
 			{
+				printf("Got a message:%.*s\n", cl->received, cl->inputBuffer);
 				if (cl->received > MAX_MESSAGE)
 				{
+					printf("Request size exceeded\n");
 					SendWholeMessage(cl->socket, err400);
 					goto cont;
 				}
@@ -75,6 +87,7 @@ void CreateWebFileServer()
 				//check if header is supported
 				if (strncmp(cl->inputBuffer, "GET /", 5))
 				{
+					printf("Unsopported request received\n");
 					SendWholeMessage(cl->socket, err400);
 					goto cont;
 				}
@@ -84,6 +97,7 @@ void CreateWebFileServer()
 				char* pathEnd = strstr(pathStart, " ");
 				if(!pathEnd)
 				{
+					printf("Found no space at the end of path\n");
 					SendWholeMessage(cl->socket, err400);
 					goto cont;
 				}
@@ -122,6 +136,7 @@ void drop(SOCKET socket)
 			struct client* toFree = *cl;
 			*cl = (*cl)->next;
 			free(toFree);
+			printf("Client session terminated\n");
 			return;
 		}
 		cl = &(*cl)->next;
@@ -135,14 +150,18 @@ void SendFile(SOCKET client, char* path)
 
 	if (strstr(path, ".."))
 	{
+		printf("Cannot handle ..\n");
 		SendWholeMessage(client, err404);
 		return;
 	}
-	path++;
 
-	FILE* fp = fopen(path, "rb");
+	char homeRelativePath[1024];
+	sprintf(homeRelativePath, "/home/rico/%s", path);
+
+	FILE* fp = fopen(homeRelativePath, "rb");
 	if (!fp)
 	{
+		printf("Cannot open file '%s'\n", homeRelativePath);
 		SendWholeMessage(client, err404);
 		return;
 	}
@@ -151,7 +170,7 @@ void SendFile(SOCKET client, char* path)
 	size_t fileSize = ftell(fp);
 	rewind(fp);
 
-	char* contentType = get_content_type(path);
+	const char* contentType = get_content_type(homeRelativePath);
 
 	char buffer[1024];
 	sprintf(buffer, "HTTP/1.1 200 OK\r\n");
@@ -191,7 +210,7 @@ fd_set RunSelect()
 			max = cl->socket;
 		cl = cl->next;
 	}
-	++cl;
+	++max;
 	select(max, &set, 0, 0, 0);
 	return set;
 }
