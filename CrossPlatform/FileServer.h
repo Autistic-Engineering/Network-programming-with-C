@@ -3,6 +3,11 @@
 #include "CommonHeader.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <openssl/crypto.h>
+#include <openssl/x509.h>
+#include <openssl/pem.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 
 #define MAX_MESSAGE 2047
 
@@ -13,6 +18,7 @@ struct client
 	socklen_t addrLen;
 	char inputBuffer[MAX_MESSAGE+1];
 	int received;
+	SSL* ssl;
 
 	struct client* next;
 };
@@ -33,9 +39,9 @@ static const char err404[] = "HTTP/1.1 404 Not Found\r\n"
 
 void drop(SOCKET socket);
 
-void SendWholeMessage(SOCKET target, const char* message);
+void SendWholeMessage(SSL* target, const char* message);
 
 const char* get_content_type(const char* path);
-void SendFile(SOCKET client, char* path);
+void SendFile(SSL* client, char* path);
 void CreateWebFileServer();
 fd_set RunSelect();

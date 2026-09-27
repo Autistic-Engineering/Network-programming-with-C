@@ -1,8 +1,46 @@
 #include "FileServer.h"
 #include <string.h>
+
+#include <signal.h>
 //http://127.0.0.1:8080/
+volatile sig_atomic_t keepRunning = 1;
+void handleDrop(int sig){
+	if(sig == SIGINT){
+		printf("GOT CTRL + C\n");
+		keepRunning = 0;
+	}
+}
+
 void CreateWebFileServer()
 {
+	signal(SIGINT, handleDrop);
+	#pragma region certificates setup
+	OPENSSL_init();
+	//OpenSSL_add_all_algorithms(); //questions
+	OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_CIPHERS | OPENSSL_INIT_ADD_ALL_DIGESTS, NULL);
+	//SSL_load_error_strings();
+	OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS | OPENSSL_INIT_LOAD_CRYPTO_STRINGS, NULL);
+
+	SSL_CTX* sslContext = SSL_CTX_new(TLS_server_method());
+	if(!sslContext){
+		printf("Failed to initialize ssl context\n");
+		ERR_print_errors_fp(stderr);
+		exit(111);
+	}
+
+	if(SSL_CTX_use_certificate_file(sslContext, "/home/rico/myTestCert/cert.pem", SSL_FILETYPE_PEM) == 0){
+		printf("Failed to apply certificate file\n");
+		ERR_print_errors_fp(stderr);
+		exit(111);
+	}
+	if(SSL_CTX_use_PrivateKey_file(sslContext, "/home/rico/myTestCert/key.pem", SSL_FILETYPE_PEM) == 0){
+		printf("Failed to apply private key file\n");
+		ERR_print_errors_fp(stderr);
+		exit(111);
+	}
+	#pragma endregion
+
+
 	Init();
 	//start server
 	printf("Starting a listener!\n");
@@ -31,7 +69,7 @@ void CreateWebFileServer()
 		exit(1);
 	}
 	printf("Lesten cycle begins!\n");
-	while (1)
+	while (keepRunning)
 	{
 		fd_set set = RunSelect();
 		if (FD_ISSET(server, &set))
@@ -40,6 +78,8 @@ void CreateWebFileServer()
 			struct sockaddr_storage clientAddr;
 			socklen_t addrLen = sizeof(clientAddr);
 			SOCKET clientSocket = accept(server, (struct sockaddr*) &clientAddr, &addrLen);
+			struct timeval timeout = {.tv_sec = 2, .tv_usec = 0};
+			setsockopt(clientSocket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
 			struct client* newOne = malloc(sizeof(struct client));
 			if (ISVALIDSOCKET(clientSocket) && newOne)
 			{
@@ -50,9 +90,27 @@ void CreateWebFileServer()
 
 				newOne->next = client_list;
 
-				client_list = newOne;
+				newOne->ssl = SSL_new(sslContext);
+				
 
-				printf("New client got connected!\n");
+				if(SSL_set_fd(newOne->ssl, newOne->socket) == 0){
+					printf("Failed to set FD for client\n");
+					ERR_print_errors_fp(stderr);
+					break;
+				}
+				if(SSL_accept(newOne->ssl) != 1){
+					printf("Failed to accept TLS client, dropping it\n");
+					ERR_print_errors_fp(stderr);
+					SSL_shutdown(newOne->ssl);
+					SSL_free(newOne->ssl);
+					CLOSESOCKET(clientSocket);
+					free(newOne);
+				}
+				else{
+					client_list = newOne;
+					printf("New client got connected!\n");
+				}
+					
 			}
 			else
 				CLOSESOCKET(clientSocket);
@@ -69,7 +127,7 @@ void CreateWebFileServer()
 			}
 
 			//client has something to send
-			cl->received = recv(cl->socket, cl->inputBuffer, MAX_MESSAGE, 0);
+			cl->received = SSL_read(cl->ssl, cl->inputBuffer, MAX_MESSAGE);
 
 			if (cl->received > 0)
 			{
@@ -77,7 +135,7 @@ void CreateWebFileServer()
 				if (cl->received > MAX_MESSAGE)
 				{
 					printf("Request size exceeded\n");
-					SendWholeMessage(cl->socket, err400);
+					SendWholeMessage(cl->ssl, err400);
 					goto cont;
 				}
 				//search for header end
@@ -88,7 +146,7 @@ void CreateWebFileServer()
 				if (strncmp(cl->inputBuffer, "GET /", 5))
 				{
 					printf("Unsopported request received\n");
-					SendWholeMessage(cl->socket, err400);
+					SendWholeMessage(cl->ssl, err400);
 					goto cont;
 				}
 
@@ -98,12 +156,12 @@ void CreateWebFileServer()
 				if(!pathEnd)
 				{
 					printf("Found no space at the end of path\n");
-					SendWholeMessage(cl->socket, err400);
+					SendWholeMessage(cl->ssl, err400);
 					goto cont;
 				}
 				*pathEnd = 0;
 
-				SendFile(cl->socket, pathStart);
+				SendFile(cl->ssl, pathStart);
 				drop(cl->socket);
 			}
 			else
@@ -116,18 +174,21 @@ void CreateWebFileServer()
 			continue;
 		}
 	}
-
+	printf("terminating...\n");
+	#pragma region certificates destroy
+	CLOSESOCKET(server);
+	SSL_CTX_free(sslContext);
+	#pragma endregion
 	Destroy();
 }
 
-void SendWholeMessage(SOCKET target, const char* message)
+void SendWholeMessage(SSL* target, const char* message)
 {
-	send(target, message, strlen(message), 0);
+	SSL_write(target, message, strlen(message));
 }
 
 void drop(SOCKET socket)
 {
-	CLOSESOCKET(socket);
 	struct client** cl = &client_list;
 	while (*cl)
 	{
@@ -135,6 +196,11 @@ void drop(SOCKET socket)
 		{
 			struct client* toFree = *cl;
 			*cl = (*cl)->next;
+
+			SSL_shutdown(toFree->ssl);
+			SSL_free(toFree->ssl);
+			CLOSESOCKET(socket);
+
 			free(toFree);
 			printf("Client session terminated\n");
 			return;
@@ -143,7 +209,7 @@ void drop(SOCKET socket)
 	}
 }
 
-void SendFile(SOCKET client, char* path)
+void SendFile(SSL* client, char* path)
 {
 	if (strcmp(path, "/") == 0)
 		path = "index.html";
@@ -174,21 +240,21 @@ void SendFile(SOCKET client, char* path)
 
 	char buffer[1024];
 	sprintf(buffer, "HTTP/1.1 200 OK\r\n");
-	send(client, buffer, strlen(buffer), 0);
+	SSL_write(client, buffer, strlen(buffer));
 
 	sprintf(buffer, "Connection: close\r\n");
-	send(client, buffer, strlen(buffer), 0);
+	SSL_write(client, buffer, strlen(buffer));
 
 	sprintf(buffer, "Content-Type: %s\r\n", contentType);
-	send(client, buffer, strlen(buffer), 0);
+	SSL_write(client, buffer, strlen(buffer));
 
 	sprintf(buffer, "Content-Length: %zu\r\n\r\n", fileSize);
-	send(client, buffer, strlen(buffer), 0);
+	SSL_write(client, buffer, strlen(buffer));
 
 	int beenRead = fread(buffer, 1, 1024, fp);
 	while (beenRead)
 	{
-		send(client, buffer, beenRead, 0);
+		SSL_write(client, buffer, beenRead);
 		beenRead = fread(buffer, 1, 1024, fp);
 	}
 	fclose(fp);
@@ -211,7 +277,16 @@ fd_set RunSelect()
 		cl = cl->next;
 	}
 	++max;
-	select(max, &set, 0, 0, 0);
+
+	struct timeval timeout = {
+		.tv_sec = 3,
+		.tv_usec = 0
+	};
+
+	if(select(max, &set, 0, 0, &timeout) < 0)
+	{
+		FD_ZERO(&set);
+	}
 	return set;
 }
 
